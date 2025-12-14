@@ -1,87 +1,178 @@
-# Predictive Maintenance for Industrial Pumps
+---
 
-## Overview
-This notebook demonstrates a comprehensive approach to building a predictive maintenance system for industrial pumps using time-series sensor data. The goal is to predict pump failures within a 24-hour horizon, enabling proactive maintenance and minimizing downtime. The project covers data loading, extensive cleaning, exploratory data analysis (EDA), advanced feature engineering, and machine learning model training and evaluation.
+# Predictive Maintenance for Industrial Pumps -- Accenture AI Studio
 
-## Dataset
-The dataset contains time-series sensor readings from multiple industrial pumps, including:
--   `timestamp`: Date and time of the reading.
--   `pump_throughput_m3ph`: Fluid throughput (cubic meters per hour).
--   `operating_pressure_bar`: Operating pressure (bar).
--   `vibration_mm_s`: Vibration level (millimeters per second).
--   `bearing_temp_C`: Bearing temperature (Celsius).
--   `status`: Operating status (`RUNNING` or `DOWN`).
--   `pump_number`: Unique identifier for each pump.
+---
 
-The dataset comprises over 720,000 records across 50 pumps, with a logging interval of 10 minutes.
+### 👥 **Team Members**
 
-## Data Cleaning and Preparation
-**Key Steps:**
-1.  **Timestamp Conversion**: Converted `timestamp` to datetime format and handled one missing entry.
-2.  **Status Standardization**: Standardized the `status` column to `RUNNING` or `DOWN` to ensure consistency.
-3.  **Missing Values & Duplicates**: Checked for and confirmed no significant missing values or duplicate rows (`(timestamp, pump_number)`).
-4.  **Outlier Detection**: Identified outliers in sensor readings (throughput, pressure, vibration, temperature) using the IQR method per pump. Noted that a significant portion of outliers occur during `DOWN` events, as expected.
-5.  **Time Series Consistency**: Verified consistent 10-minute logging intervals and sorted data chronologically per pump.
+| Name          | GitHub Handle | Contribution                                                      |
+| ------------- | ------------- | ----------------------------------------------------------------- |
+| Ynalois Pangilinan   | *@ynaloisp* | Project coordination, EDA, Data Preprocessing |
+| Lanaya Carbonell | *@LanayaC*    | Data cleaning, results interpretation, documentation              |
+| Fatima Rasheed | *@fzrasheed*    | Feature engineering, model development, outlier analysis           |
+| Osewuike Igue | *@autowiki4*    | Model training, hyperparameter tuning, evaluation                 |
+| Samiksha Gaherwar | *@Samiksha-Gah*    | Model training/testing, evaluation             |
 
-## Exploratory Data Analysis (EDA)
-**Key Findings:**
--   **Class Imbalance**: The dataset is highly imbalanced, with approximately 93.3% `RUNNING` states and 6.7% `DOWN` states.
--   **Sensor Distributions**: Clear distinctions in sensor values between `RUNNING` and `DOWN` states:
-    -   `RUNNING`: Throughput (99.88 m³/h), Pressure (9.79 bar), Vibration (1.33 mm/s), Temperature (66.68 °C).
-    -   `DOWN`: All operational sensors (throughput, pressure, vibration) drop to ~0, while bearing temperature cools to ambient levels (~25 °C).
--   **Temporal Patterns**: Pump failures show recurring patterns, with spikes in `DOWN` events over time. Failure events tend to peak between 2 AM and 5 AM, particularly at 4 AM, and are fairly consistent across days of the week, with slightly fewer on Sundays.
--   **Failure Duration**: Most pump failures last between 13-18 hours, with a peak around 15-16 hours, indicating a consistent repair/recovery time.
--   **Outlier-Failure Correlation**: System-wide outlier rates closely align with `DOWN` events, with the outlier fraction steadily rising from 0% at 24 hours pre-failure to nearly 100% at failure, suggesting strong predictive signal.
--   **Sensor Correlations**: Strong correlation between `throughput` and `operating_pressure` (0.97). `Vibration` and `bearing_temp_C` also show moderate correlations with other sensors, providing complementary information.
+---
 
-## Feature Engineering
-To enhance prediction capabilities, a rich set of features was engineered:
--   **Rolling Statistics**: Mean, standard deviation, and range for all sensor columns over 1-hour, 6-hour, and 12-hour windows (lagged by one time step to prevent data leakage).
--   **Slopes**: Short-term and medium-term trends (1-hour and 6-hour slopes) for sensor readings, indicating rates of change.
--   **Robust Z-Scores**: Normalized sensor values based on per-pump median and Median Absolute Deviation (MAD) from the training set, to identify deviations from normal operating conditions.
--   **Outlier Flags and Rates**: Flags for individual sensor outliers and a rolling 1-hour rate of `any_outlier` events, indicating increasing anomaly prevalence.
--   **Temporal Features**: Sine and cosine transformations of `hour` and `dayofweek` to capture cyclical patterns.
--   **Interaction Ratios**: Combined sensor signals (e.g., `temp_vib_ratio`, `throughput_vib_ratio`, `pressure_throughput_product`) to capture complex relationships.
--   **Target Variable**: `y_failure_24h`, a binary label indicating whether a pump will fail within the next 24 hours.
+## 🎯 **Project Highlights**
 
-## Model Training and Evaluation
-The data was split chronologically into training (70%) and testing (30%) sets to ensure no future data was used for training.
+* Developed a **machine learning–based predictive maintenance system** to forecast industrial pump failures within a **24-hour horizon** using multivariate time-series sensor data.
+* Engineered a rich set of **temporal, statistical, and anomaly-based features**, including rolling statistics, slopes, robust z-scores, and outlier rates.
+* Achieved a **ROC-AUC of 0.86** and **PR-AUC of 0.40** using an **XGBoost classifier**, with **high recall (>0.80)** for failure events—critical for maintenance planning.
+* Addressed real-world constraints such as **class imbalance**, **pump-specific behavior**, and **time-series data leakage** using careful validation strategies.
+* Generated actionable insights to support **proactive maintenance scheduling**, reducing downtime and operational risk.
 
-**Models Explored:**
--   **Logistic Regression (Baseline)**: Established a baseline performance with `ROC-AUC: 0.8192` and `PR-AUC: 0.3742`. Achieved a recall of ~0.72 for failures at a default threshold, and ~0.80 recall when tuning the threshold for higher sensitivity.
--   **Random Forest Classifier**: Showed improved performance over Logistic Regression with `ROC-AUC: 0.8459` and `PR-AUC: 0.3856` (from full data run).
--   **XGBoost Classifier**: Achieved the best performance among the single models with `ROC-AUC: 0.8622` and `PR-AUC: 0.4016` (using a tuned threshold, recall was 0.8192).
+---
 
-**Model Comparison (subsampled data for quick iteration):**
-| Model                  | Fit Time (s) | PR-AUC   | ROC-AUC  | Accuracy | F1 Score | Precision | Recall   |
-|------------------------|--------------|----------|----------|----------|----------|-----------|----------|
-| Linear SVC (scaled)    | 2.08         | **0.3966** | 0.8604   | 0.7813   | 0.4124   | 0.2827    | 0.7623   |
-| Extra Trees            | 4.88         | 0.3966   | **0.8631** | 0.7457   | 0.3981   | 0.2613    | **0.8355** |
-| Logistic Regression    | 2.12         | 0.3964   | 0.8600   | 0.7861   | 0.4149   | 0.2863    | 0.7531   |
-| Gradient Boosting      | 17.14        | 0.3897   | 0.8588   | 0.8347   | 0.4353   | 0.3317    | 0.6330   |
-| Random Forest          | 17.14        | 0.3856   | 0.8594   | 0.7667   | 0.4067   | 0.2733    | 0.7945   |
-| Hist Gradient Boosting | 3.54         | 0.3769   | 0.8582   | 0.8377   | 0.4418   | 0.3378    | 0.6381   |
-| Gaussian NB            | 0.29         | 0.1313   | 0.6278   | 0.2192   | 0.2047   | 0.1140    | 0.9982   |
+## 👩🏽‍💻 **Setup and Installation**
 
-*Note: Metrics for the model comparison table were generated using a subsampled training set for faster iteration. Full data training (e.g., for XGBoost) yielded higher scores.* 
+Follow the steps below to reproduce the analysis and results.
 
-**Cross-Validation**: Group K-Fold cross-validation (by `pump_number`) was performed to ensure robustness against pump-specific biases.
+### 1. Clone the repository
 
-## Visualization of Predictions
-Visualizations of predicted failure probabilities against actual failures for individual pumps highlight the model's ability to identify impending failures, often showing a rising probability trend before the actual `DOWN` event.
+```bash
+git clone https://github.com/yourusername/Accenture2A_Project.git
+cd Accenture2A_Project
+```
 
-## Conclusion
-The project successfully demonstrates that advanced feature engineering combined with robust machine learning models like XGBoost can effectively predict pump failures within a 24-hour window. The high recall achieved is critical for predictive maintenance applications, where minimizing false negatives (missed failures) is paramount.
+### 2. Install dependencies
 
-## Setup and Usage
-This notebook is designed to run in a Google Colab environment. 
-
-**Dependencies:**
 ```bash
 pip install pandas numpy matplotlib seaborn scikit-learn xgboost numba
 ```
 
-**How to Run:**
-1.  Open the notebook in Google Colab.
-2.  Ensure you have access to the Google Sheet dataset (the `sheet_id` is provided in the notebook).
-3.  Run all cells sequentially to reproduce the analysis and model training.
+### 3. Dataset access
+
+* The dataset is accessed via a **Google Sheet**, but is also a CSV file.
+* Ensure you have permission to access the sheet.
+* The `sheet_id` is specified directly in the notebook.
+
+### 4. Run the notebook
+
+* Open the notebook in **Google Colab** (recommended) or Jupyter Notebook.
+* Run all cells sequentially to reproduce data cleaning, EDA, feature engineering, and model training.
+
+---
+
+## 🏗️ **Project Overview**
+
+This project was completed as part of the **Break Through Tech AI Program – AI Studio**, where teams collaborate on real-world, industry-inspired machine learning challenges.
+
+**Project Objective:**
+To build a predictive maintenance model capable of identifying **impending pump failures up to 24 hours in advance** using historical sensor data.
+
+**Scope & Real-World Significance:**
+Unplanned pump failures can lead to costly downtime, safety risks, and operational inefficiencies. By accurately predicting failures ahead of time, maintenance teams can:
+
+* Schedule repairs proactively
+* Reduce emergency shutdowns
+* Optimize resource allocation
+
+This project demonstrates how **data science and machine learning** can be applied to industrial systems to deliver tangible operational value.
+
+---
+
+## 📊 **Data Exploration**
+
+### Dataset Description
+
+* **Size:** ~720,000 records
+* **Pumps:** 50 unique pumps
+* **Frequency:** 10-minute intervals
+* **Features:** Throughput, pressure, vibration, bearing temperature, operating status
+
+### Key EDA Insights
+
+* **Severe class imbalance:** ~93.3% `RUNNING`, ~6.7% `DOWN`
+* During `DOWN` events:
+
+  * Throughput, pressure, and vibration drop to ~0
+  * Bearing temperature cools toward ambient (~25°C)
+* **Temporal patterns**:
+
+  * Failures peak between **2–5 AM**, especially around **4 AM**
+  * Slightly fewer failures occur on Sundays
+* **Failure duration**:
+
+  * Most failures last **13–18 hours**, suggesting consistent repair times
+* **Outlier behavior**:
+
+  * Outlier rates increase steadily in the **24 hours leading up to failure**
+  * Near-failure windows show outlier rates approaching 100%
+
+### Challenges & Assumptions
+
+* Sensor outliers during `DOWN` states were treated as **expected behavior**, not noise.
+* Care was taken to avoid **data leakage** when computing rolling features.
+
+---
+
+## 🧠 **Model Development**
+
+### Feature Engineering
+
+* Rolling mean, standard deviation, and range (1h, 6h, 12h windows)
+* Short- and medium-term slopes to capture trends
+* Robust z-scores using **median and MAD** (per pump)
+* Outlier flags and rolling outlier rates
+* Temporal cyclical features (hour and day-of-week using sine/cosine)
+* Interaction features combining multiple sensor signals
+
+### Models Explored
+
+* Logistic Regression (baseline)
+* Random Forest
+* Extra Trees
+* Gradient Boosting
+* Linear SVC
+* XGBoost (best-performing model)
+
+### Training Setup
+
+* **Chronological split:** 70% train / 30% test
+* **Group K-Fold cross-validation** by `pump_number`
+* Evaluation focused on **PR-AUC and Recall**, prioritizing failure detection
+
+---
+
+## 📈 **Results & Key Findings**
+
+### Best Model: XGBoost
+
+* **ROC-AUC:** 0.86
+* **PR-AUC:** 0.40
+* **Recall:** ~0.82 (after threshold tuning)
+
+### Key Takeaways
+
+* Advanced feature engineering significantly improved predictive performance.
+* Outlier-based and trend-based features were strong early indicators of failure.
+* High recall is achievable without an extreme loss in precision, making the model suitable for real-world maintenance workflows.
+
+---
+
+## 🚀 **Next Steps**
+
+* Incorporate **cost-sensitive learning** to explicitly balance false positives and false negatives.
+* Explore **sequence-based models** (e.g., LSTM or Temporal CNNs).
+* Evaluate model performance under **concept drift** as equipment ages.
+* Integrate predictions into a **real-time monitoring dashboard**.
+* Test generalization on data from **new pumps or facilities**.
+
+---
+
+## 📄 **References**
+
+* Scikit-learn Documentation
+* XGBoost Documentation
+* Time-Series Feature Engineering for Predictive Maintenance (industry articles)
+
+---
+
+## 🙏 **Acknowledgements**
+
+We thank our **Break Through Tech AI Studio advisors**, teaching assistants, and peers for their guidance and feedback throughout this project.
+
+---
